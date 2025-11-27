@@ -1,0 +1,341 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>防毒文案比赛系统</title>
+  <style>
+    :root{
+      --bg:#f7f9fc; --card:#fff; --muted:#6b7280; --accent:#0d6efd; --danger:#d9534f;
+      --ok:#198754;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: "Helvetica Neue", Arial, sans-serif; background:var(--bg); color:#111;
+      -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale;
+    }
+    .wrap{max-width:980px;margin:28px auto;padding:20px;}
+    header{display:flex;gap:16px;align-items:center; margin-bottom:18px;}
+    header h1{margin:0;font-size:20px}
+    .card{background:var(--card); border-radius:12px; padding:18px; box-shadow:0 6px 18px rgba(12,22,33,0.06);}
+    .row{display:flex;gap:12px;align-items:center}
+    .col{flex:1}
+    label{display:block;font-size:13px;color:var(--muted); margin-bottom:6px}
+    input[type="text"], input[type="number"], select, textarea{
+      width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e6e9ef; font-size:14px;
+      outline:none; background:transparent;
+    }
+    textarea{min-height:160px; resize:vertical; font-family:inherit; line-height:1.6}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    button{
+      padding:10px 12px;border-radius:10px;border:0;background:var(--accent);color:#fff;font-weight:600;cursor:pointer;
+    }
+    button.ghost{background:transparent;border:1px solid #e6e9ef;color:#111}
+    button.warn{background:var(--danger)}
+    .stats{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+    .stat{background:#fbfdff;padding:10px 12px;border-radius:10px;min-width:120px;text-align:center}
+    .stat .num{font-size:18px;font-weight:700}
+    .muted{color:var(--muted);font-size:13px}
+    .small{font-size:13px;color:var(--muted)}
+    .templates{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+    .template{padding:8px 10px;border-radius:8px;border:1px dashed #e6e9ef;background:linear-gradient(180deg,#fff,#fbfdff);cursor:pointer}
+    .danger-text{color:var(--danger);font-weight:700}
+    .ok-text{color:var(--ok);font-weight:700}
+    footer{margin-top:14px;color:var(--muted);font-size:13px}
+    .history-list{max-height:160px;overflow:auto;margin-top:8px;padding:8px;border-radius:8px;border:1px solid #eef2f7;background:#fff}
+    .history-item{padding:6px;border-bottom:1px solid #f1f5f9}
+    .flex-between{display:flex;justify-content:space-between;align-items:center}
+    @media (max-width:720px){
+      header{flex-direction:column;align-items:flex-start;gap:6px}
+      .row{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div>
+        <h1>防毒文案比赛系统</h1>
+        <div class="small">实时计字、按字扣费、支持版本名自定义与模板（离线 HTML，可直接打开）</div>
+      </div>
+      <div style="margin-left:auto" class="small muted">预算：<span id="budgetLabel">¥50,000</span> · 单价：<span id="priceLabel">¥10/字</span></div>
+    </header>
+
+    <div class="card">
+      <div class="row" style="margin-bottom:12px">
+        <div style="flex:2">
+          <label>产品 / 页面标题（显示于导出）</label>
+          <input id="productTitle" type="text" placeholder="例如：XX防毒" value="XX防毒">
+        </div>
+        <div style="flex:1">
+          <label>单价（元/字）</label>
+          <input id="pricePerChar" type="number" min="1" value="10">
+        </div>
+        <div style="flex:1">
+          <label>预算（元）</label>
+          <input id="budget" type="number" min="0" value="50000">
+        </div>
+      </div>
+
+      <div style="display:flex;gap:12px;">
+        <div class="col">
+          <label>输入文案（含空格/标点）</label>
+          <textarea id="textInput" placeholder="在这里输入或粘贴你的网页介绍文案..."></textarea>
+
+          <div class="templates">
+            <div class="template" data-text="安全护航，极速防护">短标语：安全护航，极速防护</div>
+            <div class="template" data-text="守护您的数字世界——XX防毒，轻量高效，实时查杀，隐私无忧。">中段：守护您的数字世界...</div>
+            <div class="template" data-text="极速扫描（SpeedScan）| 深度护盾（DeepShield）| 隐私保镖（PrivacyGuard）">功能名示例</div>
+            <div class="template" data-text="欢迎来到XX防毒（旗舰版）。我们提供轻量引擎、云查杀与模块化订阅。">整段示例</div>
+          </div>
+
+          <div style="margin-top:10px" class="controls">
+            <button id="saveBtn">保存到历史</button>
+            <button id="exportBtn" class="ghost">导出为文本文件</button>
+            <button id="clearBtn" class="ghost">清空输入</button>
+            <button id="resetBtn" class="ghost">重置参数</button>
+            <button id="sampleAutoBtn" class="ghost">自动生成示例（比赛用）</button>
+          </div>
+
+        </div>
+
+        <aside style="width:320px">
+          <div>
+            <label>版本名称（可自定义）</label>
+            <input id="verFree" type="text" value="Free">
+            <div style="height:6px"></div>
+            <input id="verPro" type="text" value="Pro">
+            <div style="height:6px"></div>
+            <input id="verProMax" type="text" value="ProMax">
+          </div>
+
+          <div class="stats">
+            <div class="stat">
+              <div class="muted">字符数</div>
+              <div id="charCount" class="num">0</div>
+            </div>
+            <div class="stat">
+              <div class="muted">费用</div>
+              <div id="cost" class="num">¥0</div>
+            </div>
+            <div class="stat">
+              <div class="muted">余额</div>
+              <div id="remaining" class="num">¥50,000</div>
+            </div>
+          </div>
+
+          <div style="margin-top:12px">
+            <div class="muted">超预算提醒</div>
+            <div id="overMsg" class="small" style="margin-top:6px">—</div>
+          </div>
+
+          <div style="margin-top:12px" class="card">
+            <div class="flex-between"><div class="muted">历史（最近保存的文案）</div>
+              <div><button id="clearHistory" class="ghost">清空</button></div>
+            </div>
+            <div id="history" class="history-list"></div>
+            <div style="margin-top:8px; text-align:center">
+              <button id="downloadAll" class="ghost">下载全部历史（txt）</button>
+            </div>
+          </div>
+
+        </aside>
+      </div>
+
+      <footer>
+        提示：字符数使用 JavaScript 的字符计数（更准确支持 emoji 等）。若需把“字”按中文词语方式计算，请说明，我可改计数规则。
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    // ---- helpers ----
+    const el = id => document.getElementById(id);
+    const priceInput = el('pricePerChar');
+    const budgetInput = el('budget');
+    const textInput = el('textInput');
+    const charCountEl = el('charCount');
+    const costEl = el('cost');
+    const remainingEl = el('remaining');
+    const overMsg = el('overMsg');
+    const historyEl = el('history');
+    const productTitle = el('productTitle');
+    const verFree = el('verFree'), verPro = el('verPro'), verProMax = el('verProMax');
+
+    // Use array spread to count Unicode code points (handles surrogate pairs)
+    function countChars(str){
+      return [...str].length;
+    }
+
+    function formatCurrency(n){
+      return '¥' + n.toLocaleString();
+    }
+
+    function updateStats(){
+      const text = textInput.value || '';
+      const chars = countChars(text);
+      const price = Number(priceInput.value) || 0;
+      const budget = Number(budgetInput.value) || 0;
+      const cost = chars * price;
+      const remaining = budget - cost;
+
+      charCountEl.textContent = chars;
+      costEl.textContent = formatCurrency(cost);
+      remainingEl.textContent = formatCurrency(remaining);
+
+      if (remaining < 0){
+        overMsg.innerHTML = '<span class="danger-text">已超预算：' + formatCurrency(-remaining) + '</span>';
+      } else if (remaining <= budget * 0.1){
+        overMsg.innerHTML = '<span class="ok-text">接近预算上限，剩余 ' + formatCurrency(remaining) + '</span>';
+      } else {
+        overMsg.innerHTML = '<span class="small muted">尚有 ' + formatCurrency(remaining) + ' 可用</span>';
+      }
+
+      // update header labels
+      el('budgetLabel').textContent = formatCurrency(budget);
+      el('priceLabel').textContent = '¥' + price + '/字';
+    }
+
+    // ---- history storage (local) ----
+    const HISTORY_KEY = 'pv_battle_history';
+    function loadHistory(){
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (!raw) return [];
+      try { return JSON.parse(raw) } catch(e){ return [] }
+    }
+    function saveHistory(arr){
+      localStorage.setItem(HISTORY_KEY, JSON.stringify(arr));
+      renderHistory();
+    }
+    function renderHistory(){
+      const arr = loadHistory();
+      if (!arr.length){
+        historyEl.innerHTML = '<div class="small muted">暂无历史</div>';
+        return;
+      }
+      historyEl.innerHTML = '';
+      arr.slice().reverse().forEach((item, idx) => {
+        const div = document.createElement('div');
+        div.className = 'history-item';
+        const t = document.createElement('div');
+        t.style.whiteSpace = 'pre-wrap';
+        t.textContent = item.text;
+        const meta = document.createElement('div');
+        meta.className = 'small muted';
+        meta.style.marginTop='6px';
+        meta.innerText = `${item.chars} 字 · ${formatCurrency(item.cost)} · ${new Date(item.time).toLocaleString()}`;
+        const btns = document.createElement('div');
+        btns.style.marginTop='6px';
+        // load button
+        const loadBtn = document.createElement('button'); loadBtn.textContent='加载'; loadBtn.className='ghost';
+        loadBtn.onclick = ()=> { textInput.value = item.text; updateStats(); };
+        const delBtn = document.createElement('button'); delBtn.textContent='删除'; delBtn.className='ghost';
+        delBtn.style.marginLeft='6px';
+        delBtn.onclick = ()=> {
+          const arr2 = loadHistory(); arr2.splice(arr2.length-1-idx,1); saveHistory(arr2);
+        };
+        btns.appendChild(loadBtn); btns.appendChild(delBtn);
+
+        div.appendChild(t); div.appendChild(meta); div.appendChild(btns);
+        historyEl.appendChild(div);
+      });
+    }
+
+    function addToHistory(obj){
+      const arr = loadHistory();
+      arr.push(obj);
+      saveHistory(arr);
+    }
+
+    // ---- events ----
+    textInput.addEventListener('input', updateStats);
+    priceInput.addEventListener('input', updateStats);
+    budgetInput.addEventListener('input', updateStats);
+
+    el('clearBtn').addEventListener('click', ()=>{
+      textInput.value=''; updateStats();
+    });
+    el('resetBtn').addEventListener('click', ()=>{
+      priceInput.value = 10; budgetInput.value = 50000; productTitle.value='XX防毒';
+      verFree.value='Free'; verPro.value='Pro'; verProMax.value='ProMax';
+      updateStats();
+    });
+
+    el('saveBtn').addEventListener('click', ()=>{
+      const t = textInput.value || '';
+      const chars = countChars(t);
+      const price = Number(priceInput.value) || 0;
+      const cost = chars * price;
+      addToHistory({ text: t, chars, cost, time: Date.now() });
+      alert('已保存到历史（本地浏览器存储）');
+    });
+
+    // templates clickable
+    document.querySelectorAll('.template').forEach(elm=>{
+      elm.addEventListener('click', ()=> {
+        textInput.value = elm.dataset.text;
+        updateStats();
+      });
+    });
+
+    // export single text
+    el('exportBtn').addEventListener('click', ()=>{
+      const title = productTitle.value || '文案';
+      const text = textInput.value || '';
+      const blob = new Blob([title + "\n\n" + text], {type: 'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = (title.replace(/\s+/g,'_') || 'text') + '.txt';
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // download all history
+    el('downloadAll').addEventListener('click', ()=>{
+      const arr = loadHistory();
+      if (!arr.length){ alert('无历史可下载'); return; }
+      let out = `=== 历史文案导出 (${new Date().toLocaleString()}) ===\n\n`;
+      arr.forEach((it,i)=>{
+        out += `--- #${i+1} · ${new Date(it.time).toLocaleString()} · ${it.chars} 字 · ${formatCurrency(it.cost)} ---\n`;
+        out += it.text + "\n\n";
+      });
+      const blob = new Blob([out], {type:'text/plain;charset=utf-8'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href = url; a.download = 'history_export.txt';
+      document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    el('clearHistory').addEventListener('click', ()=>{
+      if (!confirm('确定清空本地历史吗？此操作不可恢复。')) return;
+      localStorage.removeItem(HISTORY_KEY);
+      renderHistory();
+    });
+
+    // sample auto-generate (比赛模式)
+    el('sampleAutoBtn').addEventListener('click', ()=>{
+      const p = productTitle.value || 'XX防毒';
+      const free = verFree.value || 'Free';
+      const pro = verPro.value || 'Pro';
+      const promax = verProMax.value || 'ProMax';
+      const sample =
+`${p} — 第三代旗舰防护方案
+
+${free}（基础）：基础实时查杀 + 自动更新，低占用，适合家庭与轻量用户。
+${pro}（进阶）：加入云智能查杀、行为防护与隐私检测；适合注重安全与体验的个人用户。
+${promax}（企业）：集中管理、策略下发、行为回滚与高优先响应，面向中大型企业。
+
+核心卖点：
+1) 轻量引擎：启动快、占用低，兼顾性能与安全。
+2) 云端智能：本地+云端样本混合检测，高检测率、低误报。
+3) 模块化订阅：按需开关功能，支持自定义功能名（例如：SpeedScan / DeepShield / PrivacyGuard）。
+
+立即参赛：输入你的专属文案，系统会按每字计费并显示余额。祝你在比赛中获胜！`;
+
+      textInput.value = sample;
+      updateStats();
+    });
+
+    // init
+    updateStats();
+    renderHistory();
+  </script>
+</body>
+</html>
